@@ -1,0 +1,67 @@
+name: Build & Publish Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK Licenses & Install Platform 36
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies & sync Capacitor Android
+        run: |
+          npm ci
+          npm run build:mobile
+          npx cap sync android
+
+      - name: Generate Android signing key & build signed APK
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/release.keystore \
+            -alias tactical \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass tactical123 \
+            -keypass tactical123 \
+            -dname "CN=AITacticalBoard, OU=Mobile, O=TacticalBoard, L=Taipei, S=Taiwan, C=TW"
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../AI-Football-Tactical-Board-v1.1.0.apk
+
+      - name: Upload APK to GitHub Release v1.1.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view v1.1.0 >/dev/null 2>&1; then
+            gh release create v1.1.0 --title "AI 足球空間戰術推演板 v1.1.0（手機 App 版）" --notes "6 吋手機直立單手版 Android APK 與離線隨身包"
+          fi
+          gh release upload v1.1.0 AI-Football-Tactical-Board-v1.1.0.apk --clobber

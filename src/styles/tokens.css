@@ -1,0 +1,48 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: tactical-turf (custom) · v2.0.0
+ * Critique: standalone football tactical board with 8v8/11v11 SVG pitch, voice/text simulation, and keyframe scrubber.
+ * Waivers: none
+ */
+
+:root {
+  --font-sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-bg: #0b110e;
+  --color-surface: #121b17;
+  --color-surface-raised: #17231d;
+  --color-surface-hover: #1e2d26;
+  --color-border: #25362e;
+  --color-border-strong: #32493e;
+
+  --color-ink: #eef4f0;
+  --color-ink-muted: #9eb2a7;
+  --color-ink-subtle: #6e8378;
+
+  --color-accent: #22c55e;
+  --color-accent-hover: #16a34a;
+  --color-accent-ink: #07140d;
+  --color-accent-soft: rgba(34, 197, 94, 0.14);
+
+  --color-home: oklch(0.63 0.21 25);
+  --color-away: oklch(0.62 0.16 250);
+  --color-gold: #f59e0b;
+  --color-gold-soft: rgba(245, 158, 11, 0.16);
+  --color-danger: #f43f5e;
+  --color-danger-soft: rgba(244, 63, 94, 0.16);
+
+  --color-focus: #86efac;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --dur-micro: 120ms;
+  --dur-short: 200ms;
+
+  scrollbar-color: var(--color-border-strong) var(--color-bg);
+}
+
+::selection {
+  background-color: var(--color-accent-soft);
+  color: var(--color-ink);
+}

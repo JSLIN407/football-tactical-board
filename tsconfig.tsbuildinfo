@@ -1,0 +1,1 @@
+{"root":["./src/app.render.test.tsx","./src/app.tsx","./src/main.tsx","./src/components/icons.tsx","./src/components/pitchcanvas.tsx","./src/data/formations.ts","./src/data/pitchspecs.ts","./src/engine/spatialmodel.test.ts","./src/engine/spatialmodel.ts","./src/engine/tacticalengine.test.ts","./src/engine/tacticalengine.ts","./src/types/tactics.ts"],"version":"5.9.3"}
