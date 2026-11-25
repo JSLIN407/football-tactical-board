@@ -52,16 +52,23 @@ jobs:
             -storepass tactical123 \
             -keypass tactical123 \
             -dname "CN=AITacticalBoard, OU=Mobile, O=TacticalBoard, L=Taipei, S=Taiwan, C=TW"
+          sed -i 's/\r$//' android/gradlew
           chmod +x android/gradlew
           cd android
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk ../AI-Football-Tactical-Board-v1.1.0.apk
 
-      - name: Upload APK to GitHub Release v1.1.0
+      - name: Upload APK & Mobile Bundles to GitHub Release v1.1.0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          cp "release/AI足球戰術板_手機隨身版.html" AI-Football-Tactical-Board-Standalone-v1.1.0.html
+          zip -r AI-Football-Tactical-Board-Mobile-v1.1.0.zip release/ dist/
           if ! gh release view v1.1.0 >/dev/null 2>&1; then
-            gh release create v1.1.0 --title "AI 足球空間戰術推演板 v1.1.0（手機 App 版）" --notes "6 吋手機直立單手版 Android APK 與離線隨身包"
+            gh release create v1.1.0 --title "AI 足球空間戰術推演板 v1.1.0（手機 App 安裝包）" --notes "6 吋手機直立單手版 Android APK 與離線隨身包"
           fi
-          gh release upload v1.1.0 AI-Football-Tactical-Board-v1.1.0.apk --clobber
+          gh release upload v1.1.0 \
+            AI-Football-Tactical-Board-v1.1.0.apk \
+            AI-Football-Tactical-Board-Mobile-v1.1.0.zip \
+            AI-Football-Tactical-Board-Standalone-v1.1.0.html \
+            --clobber
