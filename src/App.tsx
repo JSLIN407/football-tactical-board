@@ -24,14 +24,23 @@ import type {
 import { PitchCanvas } from './components/PitchCanvas';
 import type { PitchOrientation } from './components/PitchCanvas';
 import {
+  IconCollapse,
+  IconExpand,
   IconFootball,
   IconInstall,
+  IconMenuDots,
   IconPause,
   IconPlay,
   IconReset,
   IconRotate,
   IconSend,
 } from './components/Icons';
+
+declare global {
+  interface Window {
+    __PURE_TACTICAL_BOARD__?: boolean;
+  }
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -46,8 +55,18 @@ const AI_SCENARIOS: Array<{ id: Exclude<TacticalContextId, 'auto'>; label: strin
   { id: 'counter_press', label: '丟球高位反搶' },
 ];
 
+function detectPureStandaloneEdition(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (window.__PURE_TACTICAL_BOARD__ === true) return true;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'pure' || params.get('pure') === '1') return true;
+  if (window.location.hash === '#pure') return true;
+  if (window.location.pathname.endsWith('/pure.html')) return true;
+  return false;
+}
+
 function detectDefaultOrientation(): PitchOrientation {
-  if (typeof window !== 'undefined' && window.innerWidth <= 820 && window.innerHeight > window.innerWidth) {
+  if (typeof window !== 'undefined' && window.innerHeight >= window.innerWidth && window.innerWidth <= 900) {
     return 'vertical';
   }
   return 'horizontal';
@@ -72,7 +91,18 @@ function buildDefaultState(homeFmtId: string, awayFmtId: string) {
   return { players, ball, keyframes: [initialKeyframe] };
 }
 
-export function App() {
+export interface AppProps {
+  forcePureEdition?: boolean;
+}
+
+export function App({ forcePureEdition = false }: AppProps = {}) {
+  const isPureEdition = useMemo(
+    () => forcePureEdition || detectPureStandaloneEdition(),
+    [forcePureEdition]
+  );
+
+  const [pureMode, setPureMode] = useState<boolean>(isPureEdition);
+  const [pureMenuOpen, setPureMenuOpen] = useState<boolean>(false);
   const [format, setFormat] = useState<PitchFormat>('11v11');
   const [orientation, setOrientation] = useState<PitchOrientation>(detectDefaultOrientation);
   const [manualOrientation, setManualOrientation] = useState<boolean>(false);
@@ -115,7 +145,6 @@ export function App() {
 
   const availableFormations = useMemo(() => getFormationsForFormat(format), [format]);
 
-  // Auto-adapt pitch orientation when rotating a 6-inch phone unless manually locked
   useEffect(() => {
     if (typeof window === 'undefined' || manualOrientation) return;
     const onResize = () => {
@@ -125,7 +154,6 @@ export function App() {
     return () => window.removeEventListener('resize', onResize);
   }, [manualOrientation]);
 
-  // Capture PWA native install prompt on mobile browsers
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handler = (e: Event) => {
@@ -141,6 +169,26 @@ export function App() {
     await installPrompt.prompt();
     await installPrompt.userChoice;
     setInstallPrompt(null);
+  };
+
+  const enterPureMode = () => {
+    setIsPlaying(false);
+    setPureMenuOpen(false);
+    setPureMode(true);
+    if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {
+        // Fullscreen API is optional (e.g., iOS Safari uses standalone viewport)
+      });
+    }
+  };
+
+  const exitPureMode = () => {
+    if (isPureEdition) return;
+    setPureMenuOpen(false);
+    setPureMode(false);
+    if (typeof document !== 'undefined' && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
   };
 
   const applyReset = (nextHomeId = homeFormationId, nextAwayId = awayFormationId) => {
@@ -326,6 +374,141 @@ export function App() {
     };
   }, [isPlaying, keyframes]);
 
+  if (pureMode) {
+    return (
+      <div className="pure-shell">
+        <PitchCanvas
+          format={format}
+          orientation={orientation}
+          fullscreen
+          players={players}
+          ball={ball}
+          annotations={[]}
+          heatmapLayer="off"
+          onMovePlayer={handleMovePlayer}
+          onMoveBall={handleMoveBall}
+          onCanvasInteract={() => {
+            if (pureMenuOpen) setPureMenuOpen(false);
+          }}
+        />
+
+        <div className="pure-corner">
+          {!pureMenuOpen ? (
+            <button
+              type="button"
+              className="pure-fab"
+              aria-label="展開戰術板快速設定"
+              title="展開戰術板快速設定"
+              onClick={() => setPureMenuOpen(true)}
+            >
+              <IconMenuDots width={18} height={18} />
+            </button>
+          ) : (
+            <div className="pure-pill" role="toolbar" aria-label="純享戰術板控制">
+              <div className="segmented" role="group" aria-label="場地人數">
+                <button
+                  type="button"
+                  className={`seg-btn ${format === '8v8' ? 'is-active' : ''}`}
+                  onClick={() => handleChangeFormat('8v8')}
+                >
+                  8人
+                </button>
+                <button
+                  type="button"
+                  className={`seg-btn ${format === '11v11' ? 'is-active' : ''}`}
+                  onClick={() => handleChangeFormat('11v11')}
+                >
+                  11人
+                </button>
+              </div>
+
+              <label className="team-select is-home pure-select">
+                <select
+                  aria-label="紅隊陣型"
+                  value={homeFormationId}
+                  onChange={(e) => {
+                    setHomeFormationId(e.target.value);
+                    applyReset(e.target.value, awayFormationId);
+                  }}
+                >
+                  {availableFormations.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      紅 {f.name.split('（')[0]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="team-select is-away pure-select">
+                <select
+                  aria-label="藍隊陣型"
+                  value={awayFormationId}
+                  onChange={(e) => {
+                    setAwayFormationId(e.target.value);
+                    applyReset(homeFormationId, e.target.value);
+                  }}
+                >
+                  {availableFormations.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      藍 {f.name.split('（')[0]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                className="btn pure-icon-btn"
+                onClick={() => {
+                  setManualOrientation(true);
+                  setOrientation((prev) => (prev === 'vertical' ? 'horizontal' : 'vertical'));
+                }}
+                title="切換直向／橫向球場"
+                aria-label="切換直向／橫向球場"
+              >
+                <IconRotate width={15} height={15} />
+              </button>
+
+              <button
+                type="button"
+                className="btn pure-icon-btn"
+                onClick={() => applyReset()}
+                title="重置球員與足球位置"
+                aria-label="重置位置"
+              >
+                <IconReset width={15} height={15} />
+              </button>
+
+              {installPrompt && (
+                <button
+                  type="button"
+                  className="btn pure-icon-btn"
+                  onClick={handleInstallApp}
+                  title="安裝至手機主畫面"
+                  aria-label="安裝 App"
+                >
+                  <IconInstall width={15} height={15} />
+                </button>
+              )}
+
+              {!isPureEdition && (
+                <button
+                  type="button"
+                  className="btn pure-exit-btn"
+                  onClick={exitPureMode}
+                  title="返回 AI 推演版"
+                >
+                  <IconCollapse width={14} height={14} />
+                  返回
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="top-bar">
@@ -363,6 +546,16 @@ export function App() {
           >
             <IconRotate width={14} height={14} />
             {orientation === 'vertical' ? '直向場' : '橫向場'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-compact"
+            onClick={enterPureMode}
+            title="隱藏所有面板，切換為僅有戰術板的全螢幕純享模式"
+          >
+            <IconExpand width={14} height={14} />
+            純享全螢幕
           </button>
 
           {installPrompt && (
@@ -405,8 +598,7 @@ export function App() {
             </button>
           </div>
 
-          <label className="team-select">
-            <span className="dot dot-home" />
+          <label className="team-select is-home">
             <select
               aria-label="紅隊陣型"
               value={homeFormationId}
@@ -423,8 +615,7 @@ export function App() {
             </select>
           </label>
 
-          <label className="team-select">
-            <span className="dot dot-away" />
+          <label className="team-select is-away">
             <select
               aria-label="藍隊陣型"
               value={awayFormationId}
@@ -562,5 +753,3 @@ export function App() {
     </div>
   );
 }
-
-export default App;

@@ -5,18 +5,29 @@ import { PitchCanvas } from './components/PitchCanvas';
 import { createInitialBall, instantiateTeam } from './data/formations';
 
 describe('AI Spatial Tactical Board Mobile & Desktop UI', () => {
-  it('renders clean board with 8v8/11v11, orientation toggle, AI spatial toggles, and zero voice controls', () => {
+  it('renders clean board with 8v8/11v11, pure fullscreen toggle, AI spatial toggles, and zero voice controls', () => {
     const html = renderToStaticMarkup(<App />);
     expect(html).toContain('AI 足球空間戰術推演板');
     expect(html).toContain('8人制');
     expect(html).toContain('11人制');
-    expect(html).toContain('橫向場');
+    expect(html).toContain('純享全螢幕');
     expect(html).toContain('空檔價值熱區');
     expect(html).toContain('空間控制權');
     expect(html).toContain('依目前球位 AI 推演');
     expect(html).toContain('示範訓練');
     expect(html).not.toContain('語音');
     expect(html).not.toContain('聆聽');
+  });
+
+  it('renders pure full-screen mobile edition with only pitch, tokens, and zero AI toolbars/heatmaps', () => {
+    const pureHtml = renderToStaticMarkup(<App forcePureEdition />);
+    expect(pureHtml).toContain('pure-shell');
+    expect(pureHtml).toContain('is-fullscreen');
+    expect(pureHtml).toContain('展開戰術板快速設定');
+    expect(pureHtml).not.toContain('AI 足球空間戰術推演板');
+    expect(pureHtml).not.toContain('依目前球位 AI 推演');
+    expect(pureHtml).not.toContain('示範訓練');
+    expect(pureHtml).not.toContain('heat-blur');
   });
 
   it('renders both horizontal and 6-inch vertical mobile pitch SVGs with OBSO heatmap', () => {

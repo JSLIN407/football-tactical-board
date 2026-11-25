@@ -1,5 +1,5 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: tactical-turf (custom) · v2.0.0
- * Critique: standalone football tactical board with 8v8/11v11 SVG pitch, voice/text simulation, and keyframe scrubber.
+ * Critique: standalone football tactical board with 8v8/11v11 SVG pitch, pure full-screen mobile mode, and spatial simulation.
  * Waivers: none
  */
 
@@ -8,6 +8,7 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-bg: #0b110e;
+  --color-pitch-surround: #143321;
   --color-surface: #121b17;
   --color-surface-raised: #17231d;
   --color-surface-hover: #1e2d26;

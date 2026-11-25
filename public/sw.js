@@ -1,8 +1,10 @@
-const CACHE_NAME = 'ai-tactical-board-v1';
+const CACHE_NAME = 'ai-tactical-board-v2';
 const PRECACHE_URLS = [
   './',
   './index.html',
+  './pure.html',
   './manifest.webmanifest',
+  './manifest-pure.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',

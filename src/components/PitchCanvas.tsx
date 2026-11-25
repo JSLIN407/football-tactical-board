@@ -15,15 +15,16 @@ export type PitchOrientation = 'horizontal' | 'vertical';
 interface PitchCanvasProps {
   format: PitchFormat;
   orientation?: PitchOrientation;
+  fullscreen?: boolean;
   players: PlayerToken[];
   ball: BallState;
   annotations: DrawingAnnotation[];
   heatmapLayer: HeatmapLayer;
   onMovePlayer: (id: string, x: number, y: number) => void;
   onMoveBall: (x: number, y: number, holderId: string | null) => void;
+  onCanvasInteract?: () => void;
 }
 
-const PADDING = 28;
 const SCALE = 10;
 
 function buildWavyPath(x1: number, y1: number, x2: number, y2: number): string {
@@ -52,38 +53,41 @@ function buildWavyPath(x1: number, y1: number, x2: number, y2: number): string {
 export function PitchCanvas({
   format,
   orientation = 'horizontal',
+  fullscreen = false,
   players,
   ball,
   annotations,
   heatmapLayer,
   onMovePlayer,
   onMoveBall,
+  onCanvasInteract,
 }: PitchCanvasProps) {
   const spec = PITCH_SPECS[format];
   const isVertical = orientation === 'vertical';
+  const pad = fullscreen ? 22 : 28;
 
   const pitchLen = spec.lengthM * SCALE;
   const pitchWid = spec.widthM * SCALE;
   const boardW = isVertical ? pitchWid : pitchLen;
   const boardH = isVertical ? pitchLen : pitchWid;
-  const fullWidth = boardW + PADDING * 2;
-  const fullHeight = boardH + PADDING * 2;
+  const fullWidth = boardW + pad * 2;
+  const fullHeight = boardH + pad * 2;
 
   // In vertical mode (6-inch portrait phone): Home attacks bottom -> top, Left Wing stays on left
   const toSvg = useCallback(
     (nx: number, ny: number): { x: number; y: number } => {
       if (isVertical) {
         return {
-          x: PADDING + (ny / 100) * pitchWid,
-          y: PADDING + ((100 - nx) / 100) * pitchLen,
+          x: pad + (ny / 100) * pitchWid,
+          y: pad + ((100 - nx) / 100) * pitchLen,
         };
       }
       return {
-        x: PADDING + (nx / 100) * pitchLen,
-        y: PADDING + (ny / 100) * pitchWid,
+        x: pad + (nx / 100) * pitchLen,
+        y: pad + (ny / 100) * pitchWid,
       };
     },
-    [isVertical, pitchLen, pitchWid]
+    [isVertical, pad, pitchLen, pitchWid]
   );
 
   const [dragState, setDragState] = useState<
@@ -111,8 +115,8 @@ export function PitchCanvas({
     pt.x = clientX;
     pt.y = clientY;
     const svgPt = pt.matrixTransform(ctm.inverse());
-    const relX = (svgPt.x - PADDING) / boardW;
-    const relY = (svgPt.y - PADDING) / boardH;
+    const relX = (svgPt.x - pad) / boardW;
+    const relY = (svgPt.y - pad) / boardH;
 
     if (isVertical) {
       return {
@@ -183,12 +187,16 @@ export function PitchCanvas({
   const ballSvg = toSvg(ball.x, ball.y);
 
   return (
-    <div className={`pitch-frame ${isVertical ? 'is-vertical' : ''}`}>
+    <div
+      className={`pitch-frame ${isVertical ? 'is-vertical' : ''} ${fullscreen ? 'is-fullscreen' : ''}`}
+    >
       <svg
         viewBox={`0 0 ${fullWidth} ${fullHeight}`}
-        className={`pitch-svg ${isVertical ? 'is-vertical' : ''}`}
+        preserveAspectRatio="xMidYMid meet"
+        className={`pitch-svg ${isVertical ? 'is-vertical' : ''} ${fullscreen ? 'is-fullscreen' : ''}`}
         role="img"
         aria-label={`${spec.label}戰術板`}
+        onPointerDown={() => onCanvasInteract?.()}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
@@ -197,43 +205,51 @@ export function PitchCanvas({
           {isVertical ? (
             <>
               <clipPath id="clip-away-arc">
-                <rect x={PADDING} y={PADDING + paDepth} width={boardW} height={boardH} />
+                <rect x={pad} y={pad + paDepth} width={boardW} height={boardH} />
               </clipPath>
               <clipPath id="clip-home-arc">
-                <rect x={PADDING} y={PADDING} width={boardW} height={boardH - paDepth} />
+                <rect x={pad} y={pad} width={boardW} height={boardH - paDepth} />
               </clipPath>
             </>
           ) : (
             <>
               <clipPath id="clip-home-arc">
-                <rect x={PADDING + paDepth} y={PADDING} width={boardW} height={boardH} />
+                <rect x={pad + paDepth} y={pad} width={boardW} height={boardH} />
               </clipPath>
               <clipPath id="clip-away-arc">
-                <rect x={PADDING} y={PADDING} width={boardW - paDepth} height={boardH} />
+                <rect x={pad} y={pad} width={boardW - paDepth} height={boardH} />
               </clipPath>
             </>
           )}
 
-          <filter id="heat-blur" x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="14" />
-          </filter>
+          {spatialGrid && (
+            <>
+              <filter id="heat-blur" x="-10%" y="-10%" width="120%" height="120%">
+                <feGaussianBlur stdDeviation="14" />
+              </filter>
 
-          <clipPath id="clip-pitch-surface">
-            <rect x={PADDING} y={PADDING} width={boardW} height={boardH} />
-          </clipPath>
+              <clipPath id="clip-pitch-surface">
+                <rect x={pad} y={pad} width={boardW} height={boardH} />
+              </clipPath>
+            </>
+          )}
 
-          <marker id="arr-pass" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
-            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#facc15" />
-          </marker>
-          <marker id="arr-run" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
-            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ffffff" />
-          </marker>
-          <marker id="arr-dribble" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
-            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#facc15" />
-          </marker>
-          <marker id="arr-press" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#93c5fd" />
-          </marker>
+          {annotations.length > 0 && (
+            <>
+              <marker id="arr-pass" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#facc15" />
+              </marker>
+              <marker id="arr-run" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ffffff" />
+              </marker>
+              <marker id="arr-dribble" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#facc15" />
+              </marker>
+              <marker id="arr-press" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#93c5fd" />
+              </marker>
+            </>
+          )}
         </defs>
 
         {/* Pitch Surround & Grass Stripes */}
@@ -242,8 +258,8 @@ export function PitchCanvas({
           isVertical ? (
             <rect
               key={idx}
-              x={PADDING}
-              y={PADDING + idx * stripeSpan}
+              x={pad}
+              y={pad + idx * stripeSpan}
               width={boardW}
               height={stripeSpan + 0.5}
               fill={idx % 2 === 0 ? '#1d4d30' : '#19432a'}
@@ -251,8 +267,8 @@ export function PitchCanvas({
           ) : (
             <rect
               key={idx}
-              x={PADDING + idx * stripeSpan}
-              y={PADDING}
+              x={pad + idx * stripeSpan}
+              y={pad}
               width={stripeSpan + 0.5}
               height={boardH}
               fill={idx % 2 === 0 ? '#1d4d30' : '#19432a'}
@@ -269,10 +285,10 @@ export function PitchCanvas({
                 const c = idx % spatialGrid.cols;
                 const cellLen = pitchLen / spatialGrid.cols;
                 const cellWid = pitchWid / spatialGrid.rows;
-                const x = isVertical ? PADDING + r * cellWid : PADDING + c * cellLen;
+                const x = isVertical ? pad + r * cellWid : pad + c * cellLen;
                 const y = isVertical
-                  ? PADDING + (spatialGrid.cols - 1 - c) * cellLen
-                  : PADDING + r * cellWid;
+                  ? pad + (spatialGrid.cols - 1 - c) * cellLen
+                  : pad + r * cellWid;
                 const w = isVertical ? cellWid : cellLen;
                 const h = isVertical ? cellLen : cellWid;
 
@@ -336,78 +352,74 @@ export function PitchCanvas({
 
         {/* Field Markings */}
         <g stroke="rgba(255, 255, 255, 0.85)" strokeWidth={2.2} fill="none" pointerEvents="none">
-          <rect x={PADDING} y={PADDING} width={boardW} height={boardH} />
+          <rect x={pad} y={pad} width={boardW} height={boardH} />
 
           {isVertical ? (
             <>
-              {/* Halfway Horizontal Line */}
               <line
-                x1={PADDING}
-                y1={PADDING + boardH / 2}
-                x2={PADDING + boardW}
-                y2={PADDING + boardH / 2}
+                x1={pad}
+                y1={pad + boardH / 2}
+                x2={pad + boardW}
+                y2={pad + boardH / 2}
               />
-              <circle cx={PADDING + boardW / 2} cy={PADDING + boardH / 2} r={centerR} />
+              <circle cx={pad + boardW / 2} cy={pad + boardH / 2} r={centerR} />
               <circle
-                cx={PADDING + boardW / 2}
-                cy={PADDING + boardH / 2}
+                cx={pad + boardW / 2}
+                cy={pad + boardH / 2}
                 r={3}
                 fill="rgba(255, 255, 255, 0.85)"
               />
 
-              {/* Top Box (Away Goal, nx = 100) */}
-              <rect x={PADDING + (boardW - paWidth) / 2} y={PADDING} width={paWidth} height={paDepth} />
-              <rect x={PADDING + (boardW - gaWidth) / 2} y={PADDING} width={gaWidth} height={gaDepth} />
+              <rect x={pad + (boardW - paWidth) / 2} y={pad} width={paWidth} height={paDepth} />
+              <rect x={pad + (boardW - gaWidth) / 2} y={pad} width={gaWidth} height={gaDepth} />
               <circle
-                cx={PADDING + boardW / 2}
-                cy={PADDING + penSpot}
+                cx={pad + boardW / 2}
+                cy={pad + penSpot}
                 r={2.8}
                 fill="rgba(255, 255, 255, 0.85)"
               />
               <circle
-                cx={PADDING + boardW / 2}
-                cy={PADDING + penSpot}
+                cx={pad + boardW / 2}
+                cy={pad + penSpot}
                 r={penArcR}
                 clipPath="url(#clip-away-arc)"
               />
 
-              {/* Bottom Box (Home Goal, nx = 0) */}
               <rect
-                x={PADDING + (boardW - paWidth) / 2}
-                y={PADDING + boardH - paDepth}
+                x={pad + (boardW - paWidth) / 2}
+                y={pad + boardH - paDepth}
                 width={paWidth}
                 height={paDepth}
               />
               <rect
-                x={PADDING + (boardW - gaWidth) / 2}
-                y={PADDING + boardH - gaDepth}
+                x={pad + (boardW - gaWidth) / 2}
+                y={pad + boardH - gaDepth}
                 width={gaWidth}
                 height={gaDepth}
               />
               <circle
-                cx={PADDING + boardW / 2}
-                cy={PADDING + boardH - penSpot}
+                cx={pad + boardW / 2}
+                cy={pad + boardH - penSpot}
                 r={2.8}
                 fill="rgba(255, 255, 255, 0.85)"
               />
               <circle
-                cx={PADDING + boardW / 2}
-                cy={PADDING + boardH - penSpot}
+                cx={pad + boardW / 2}
+                cy={pad + boardH - penSpot}
                 r={penArcR}
                 clipPath="url(#clip-home-arc)"
               />
 
-              {/* Goals */}
               <rect
-                x={PADDING + (boardW - goalW) / 2}
-                y={PADDING - goalDepth}
+                x={pad + (boardW - goalW) / 2}
+                y={pad - goalDepth}
                 width={goalW}
                 height={goalDepth}
                 strokeWidth={2.4}
               />
               <rect
-                x={PADDING + (boardW - goalW) / 2}
-                y={PADDING + boardH}
+                x={pad + (boardW - goalW) / 2}
+                y={pad + boardH}
                 width={goalW}
                 height={goalDepth}
                 strokeWidth={2.4}
@@ -415,74 +427,70 @@ export function PitchCanvas({
             </>
           ) : (
             <>
-              {/* Halfway Vertical Line */}
               <line
-                x1={PADDING + boardW / 2}
-                y1={PADDING}
-                x2={PADDING + boardW / 2}
-                y2={PADDING + boardH}
+                x1={pad + boardW / 2}
+                y1={pad}
+                x2={pad + boardW / 2}
+                y2={pad + boardH}
               />
-              <circle cx={PADDING + boardW / 2} cy={PADDING + boardH / 2} r={centerR} />
+              <circle cx={pad + boardW / 2} cy={pad + boardH / 2} r={centerR} />
               <circle
-                cx={PADDING + boardW / 2}
-                cy={PADDING + boardH / 2}
+                cx={pad + boardW / 2}
+                cy={pad + boardH / 2}
                 r={3}
                 fill="rgba(255, 255, 255, 0.85)"
               />
 
-              {/* Left Box (Home Goal) */}
-              <rect x={PADDING} y={PADDING + (boardH - paWidth) / 2} width={paDepth} height={paWidth} />
-              <rect x={PADDING} y={PADDING + (boardH - gaWidth) / 2} width={gaDepth} height={gaWidth} />
+              <rect x={pad} y={pad + (boardH - paWidth) / 2} width={paDepth} height={paWidth} />
+              <rect x={pad} y={pad + (boardH - gaWidth) / 2} width={gaDepth} height={gaWidth} />
               <circle
-                cx={PADDING + penSpot}
-                cy={PADDING + boardH / 2}
+                cx={pad + penSpot}
+                cy={pad + boardH / 2}
                 r={2.8}
                 fill="rgba(255, 255, 255, 0.85)"
               />
               <circle
-                cx={PADDING + penSpot}
-                cy={PADDING + boardH / 2}
+                cx={pad + penSpot}
+                cy={pad + boardH / 2}
                 r={penArcR}
                 clipPath="url(#clip-home-arc)"
               />
 
-              {/* Right Box (Away Goal) */}
               <rect
-                x={PADDING + boardW - paDepth}
-                y={PADDING + (boardH - paWidth) / 2}
+                x={pad + boardW - paDepth}
+                y={pad + (boardH - paWidth) / 2}
                 width={paDepth}
                 height={paWidth}
               />
               <rect
-                x={PADDING + boardW - gaDepth}
-                y={PADDING + (boardH - gaWidth) / 2}
+                x={pad + boardW - gaDepth}
+                y={pad + (boardH - gaWidth) / 2}
                 width={gaDepth}
                 height={gaWidth}
               />
               <circle
-                cx={PADDING + boardW - penSpot}
-                cy={PADDING + boardH / 2}
+                cx={pad + boardW - penSpot}
+                cy={pad + boardH / 2}
                 r={2.8}
                 fill="rgba(255, 255, 255, 0.85)"
               />
               <circle
-                cx={PADDING + boardW - penSpot}
-                cy={PADDING + boardH / 2}
+                cx={pad + boardW - penSpot}
+                cy={pad + boardH / 2}
                 r={penArcR}
                 clipPath="url(#clip-away-arc)"
               />
 
-              {/* Goals */}
               <rect
-                x={PADDING - goalDepth}
-                y={PADDING + (boardH - goalW) / 2}
+                x={pad - goalDepth}
+                y={pad + (boardH - goalW) / 2}
                 width={goalDepth}
                 height={goalW}
                 strokeWidth={2.4}
               />
               <rect
-                x={PADDING + boardW}
-                y={PADDING + (boardH - goalW) / 2}
+                x={pad + boardW}
+                y={pad + (boardH - goalW) / 2}
                 width={goalDepth}
                 height={goalW}
                 strokeWidth={2.4}
@@ -490,11 +498,10 @@ export function PitchCanvas({
             </>
           )}
 
-          {/* Corners */}
-          <path d={`M ${PADDING} ${PADDING + cornerR} A ${cornerR} ${cornerR} 0 0 0 ${PADDING + cornerR} ${PADDING}`} />
-          <path d={`M ${PADDING + boardW - cornerR} ${PADDING} A ${cornerR} ${cornerR} 0 0 0 ${PADDING + boardW} ${PADDING + cornerR}`} />
-          <path d={`M ${PADDING} ${PADDING + boardH - cornerR} A ${cornerR} ${cornerR} 0 0 1 ${PADDING + cornerR} ${PADDING + boardH}`} />
-          <path d={`M ${PADDING + boardW - cornerR} ${PADDING + boardH} A ${cornerR} ${cornerR} 0 0 1 ${PADDING + boardW} ${PADDING + boardH - cornerR}`} />
+          <path d={`M ${pad} ${pad + cornerR} A ${cornerR} ${cornerR} 0 0 0 ${pad + cornerR} ${pad}`} />
+          <path d={`M ${pad + boardW - cornerR} ${pad} A ${cornerR} ${cornerR} 0 0 0 ${pad + boardW} ${pad + cornerR}`} />
+          <path d={`M ${pad} ${pad + boardH - cornerR} A ${cornerR} ${cornerR} 0 0 1 ${pad + cornerR} ${pad + boardH}`} />
+          <path d={`M ${pad + boardW - cornerR} ${pad + boardH} A ${cornerR} ${cornerR} 0 0 1 ${pad + boardW} ${pad + boardH - cornerR}`} />
         </g>
 
         {/* Simple Graphic Movement Arrows */}
@@ -570,6 +577,7 @@ export function PitchCanvas({
                 style={{ cursor: 'grab' }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
+                  onCanvasInteract?.();
                   e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
                   setDragState({ type: 'player', id: p.id });
                   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -577,7 +585,6 @@ export function PitchCanvas({
                   }
                 }}
               >
-                {/* Invisible Fat-Finger Touch Area (~42px on 6-inch mobile) */}
                 <circle r={hitRadius} fill="transparent" />
                 {isDragging && (
                   <circle
@@ -630,6 +637,7 @@ export function PitchCanvas({
           style={{ cursor: 'grab' }}
           onPointerDown={(e) => {
             e.stopPropagation();
+            onCanvasInteract?.();
             e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
             setDragState({ type: 'ball' });
             if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {

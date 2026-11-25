@@ -1,0 +1,25 @@
+{
+  "name": "足球戰術板（手機純享全螢幕版）",
+  "short_name": "戰術板純享",
+  "description": "僅有滿版球場、紅藍球員與足球拖曳的 6 吋手機純享戰術板",
+  "start_url": "./pure.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#143321",
+  "theme_color": "#143321",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
