@@ -59,30 +59,30 @@ jobs:
 
           # 1) Build Standard AI Tactical Board APK (app.tacticalboard.football)
           (cd android && ./gradlew assembleRelease --no-daemon)
-          cp android/app/build/outputs/apk/release/app-release.apk AI-Football-Tactical-Board-v1.2.0.apk
+          cp android/app/build/outputs/apk/release/app-release.apk AI-Football-Tactical-Board-v1.2.1.apk
 
           # 2) Build Full-Screen Pure Tactical Board APK (app.tacticalboard.football.pure)
           cp dist/pure.html android/app/src/main/assets/public/index.html
           sed -i 's/AI戰術板/戰術板純享/g; s/app\.tacticalboard\.football/app.tacticalboard.football.pure/g' android/app/src/main/res/values/strings.xml
           (cd android && ./gradlew assembleRelease -PpureEdition=true --no-daemon)
-          cp android/app/build/outputs/apk/release/app-release.apk Football-Tactical-Board-Pure-v1.2.0.apk
+          cp android/app/build/outputs/apk/release/app-release.apk Football-Tactical-Board-Pure-v1.2.1.apk
 
-      - name: Upload APKs & Mobile Bundles to GitHub Release v1.2.0
+      - name: Upload APKs & Mobile Bundles to GitHub Release v1.2.1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp "release/足球戰術板_手機純享版.html" Football-Tactical-Board-Pure-v1.2.0.html
-          zip -r Football-Tactical-Board-Pure-v1.2.0.zip "release/足球戰術板_手機純享版.html" dist/pure.html dist/manifest-pure.webmanifest dist/sw.js dist/assets dist/icons
-          cp "release/AI足球戰術板_手機隨身版.html" AI-Football-Tactical-Board-Standalone-v1.2.0.html
-          zip -r AI-Football-Tactical-Board-Mobile-v1.2.0.zip release/ dist/
-          if ! gh release view v1.2.0 >/dev/null 2>&1; then
-            gh release create v1.2.0 --title "足球戰術板 v1.2.0（新增全螢幕手機純享版 + AI 推演版）" --notes "同時提供【僅有戰術板全螢幕手機純享版 APK / HTML / ZIP】與【AI 空間戰術推演版 APK / HTML】，兩款 APK 套件 ID 獨立，可單獨或同時安裝於手機。"
+          cp "release/足球戰術板_手機純享版.html" Football-Tactical-Board-Pure-v1.2.1.html
+          zip -r Football-Tactical-Board-Pure-v1.2.1.zip "release/足球戰術板_手機純享版.html" dist/pure.html dist/manifest-pure.webmanifest dist/sw.js dist/assets dist/icons
+          cp "release/AI足球戰術板_手機隨身版.html" AI-Football-Tactical-Board-Standalone-v1.2.1.html
+          zip -r AI-Football-Tactical-Board-Mobile-v1.2.1.zip release/ dist/
+          if ! gh release view v1.2.1 >/dev/null 2>&1; then
+            gh release create v1.2.1 --title "足球戰術板 v1.2.1（全螢幕戰術板內嵌播放與全螢幕切換鈕）" --notes "全螢幕純享版面將【播放／暫停】與【全螢幕切換】按鈕直接配置於戰術板上，一鍵即可動態演示戰術跑位或切換全螢幕。"
           fi
-          gh release upload v1.2.0 \
-            Football-Tactical-Board-Pure-v1.2.0.apk \
-            Football-Tactical-Board-Pure-v1.2.0.html \
-            Football-Tactical-Board-Pure-v1.2.0.zip \
-            AI-Football-Tactical-Board-v1.2.0.apk \
-            AI-Football-Tactical-Board-Mobile-v1.2.0.zip \
-            AI-Football-Tactical-Board-Standalone-v1.2.0.html \
+          gh release upload v1.2.1 \
+            Football-Tactical-Board-Pure-v1.2.1.apk \
+            Football-Tactical-Board-Pure-v1.2.1.html \
+            Football-Tactical-Board-Pure-v1.2.1.zip \
+            AI-Football-Tactical-Board-v1.2.1.apk \
+            AI-Football-Tactical-Board-Mobile-v1.2.1.zip \
+            AI-Football-Tactical-Board-Standalone-v1.2.1.html \
             --clobber

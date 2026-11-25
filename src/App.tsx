@@ -103,6 +103,7 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
 
   const [pureMode, setPureMode] = useState<boolean>(isPureEdition);
   const [pureMenuOpen, setPureMenuOpen] = useState<boolean>(false);
+  const [isBrowserFullscreen, setIsBrowserFullscreen] = useState<boolean>(false);
   const [format, setFormat] = useState<PitchFormat>('11v11');
   const [orientation, setOrientation] = useState<PitchOrientation>(detectDefaultOrientation);
   const [manualOrientation, setManualOrientation] = useState<boolean>(false);
@@ -155,6 +156,15 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
   }, [manualOrientation]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const syncFullscreen = () => {
+      setIsBrowserFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const handler = (e: Event) => {
       e.preventDefault();
@@ -188,6 +198,20 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
     setPureMode(false);
     if (typeof document !== 'undefined' && document.fullscreenElement && document.exitFullscreen) {
       document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  const handleBoardFullscreenToggle = () => {
+    setPureMenuOpen(false);
+    if (!isPureEdition) {
+      exitPureMode();
+      return;
+    }
+    if (typeof document === 'undefined') return;
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
     }
   };
 
@@ -231,6 +255,18 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
               }
             : prevBall;
         setBaseSnapshot({ players: nextPlayers, ball: nextBall });
+        setKeyframes([
+          {
+            id: 'kf-live',
+            title: '目前站位',
+            description: '',
+            phase: 'setup',
+            players: nextPlayers,
+            ball: nextBall,
+            annotations: [],
+            durationMs: 700,
+          },
+        ]);
         return nextBall;
       });
       return nextPlayers;
@@ -244,6 +280,18 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
       const nextBall = { x, y, holderId };
       setBall(nextBall);
       setBaseSnapshot({ players, ball: nextBall });
+      setKeyframes([
+        {
+          id: 'kf-live',
+          title: '目前站位',
+          description: '',
+          phase: 'setup',
+          players,
+          ball: nextBall,
+          annotations: [],
+          durationMs: 700,
+        },
+      ]);
     },
     [players]
   );
@@ -270,6 +318,22 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
     },
     [baseSnapshot, format]
   );
+
+  const handleBoardPlayToggle = useCallback(() => {
+    setPureMenuOpen(false);
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (keyframes.length > 1) {
+      setPlayers(keyframes[0].players);
+      setBall(keyframes[0].ball);
+      setAnnotations(keyframes[0].annotations);
+      setTimeout(() => setIsPlaying(true), 30);
+      return;
+    }
+    triggerAIScenario('auto');
+  }, [isPlaying, keyframes, triggerAIScenario]);
 
   const triggerTextCommand = useCallback(() => {
     const prompt = commandInput.trim();
@@ -375,6 +439,13 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
   }, [isPlaying, keyframes]);
 
   if (pureMode) {
+    const showExitFullscreenIcon = !isPureEdition || isBrowserFullscreen;
+    const fullscreenLabel = !isPureEdition
+      ? '退出全螢幕'
+      : isBrowserFullscreen
+        ? '退出全螢幕'
+        : '全螢幕';
+
     return (
       <div className="pure-shell">
         <PitchCanvas
@@ -383,128 +454,155 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
           fullscreen
           players={players}
           ball={ball}
-          annotations={[]}
+          annotations={annotations}
           heatmapLayer="off"
           onMovePlayer={handleMovePlayer}
           onMoveBall={handleMoveBall}
           onCanvasInteract={() => {
             if (pureMenuOpen) setPureMenuOpen(false);
           }}
-        />
+          boardOverlay={
+            <>
+              <div
+                className="pure-corner"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {!pureMenuOpen ? (
+                  <button
+                    type="button"
+                    className="pure-fab"
+                    aria-label="展開戰術板快速設定"
+                    title="展開戰術板快速設定"
+                    onClick={() => setPureMenuOpen(true)}
+                  >
+                    <IconMenuDots width={18} height={18} />
+                  </button>
+                ) : (
+                  <div className="pure-pill" role="toolbar" aria-label="純享戰術板控制">
+                    <div className="segmented" role="group" aria-label="場地人數">
+                      <button
+                        type="button"
+                        className={`seg-btn ${format === '8v8' ? 'is-active' : ''}`}
+                        onClick={() => handleChangeFormat('8v8')}
+                      >
+                        8人
+                      </button>
+                      <button
+                        type="button"
+                        className={`seg-btn ${format === '11v11' ? 'is-active' : ''}`}
+                        onClick={() => handleChangeFormat('11v11')}
+                      >
+                        11人
+                      </button>
+                    </div>
 
-        <div className="pure-corner">
-          {!pureMenuOpen ? (
-            <button
-              type="button"
-              className="pure-fab"
-              aria-label="展開戰術板快速設定"
-              title="展開戰術板快速設定"
-              onClick={() => setPureMenuOpen(true)}
-            >
-              <IconMenuDots width={18} height={18} />
-            </button>
-          ) : (
-            <div className="pure-pill" role="toolbar" aria-label="純享戰術板控制">
-              <div className="segmented" role="group" aria-label="場地人數">
-                <button
-                  type="button"
-                  className={`seg-btn ${format === '8v8' ? 'is-active' : ''}`}
-                  onClick={() => handleChangeFormat('8v8')}
-                >
-                  8人
-                </button>
-                <button
-                  type="button"
-                  className={`seg-btn ${format === '11v11' ? 'is-active' : ''}`}
-                  onClick={() => handleChangeFormat('11v11')}
-                >
-                  11人
-                </button>
+                    <label className="team-select pure-select">
+                      <select
+                        aria-label="紅隊陣型"
+                        value={homeFormationId}
+                        onChange={(e) => {
+                          setHomeFormationId(e.target.value);
+                          applyReset(e.target.value, awayFormationId);
+                        }}
+                      >
+                        {availableFormations.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            紅 {f.name.split('（')[0]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="team-select pure-select">
+                      <select
+                        aria-label="藍隊陣型"
+                        value={awayFormationId}
+                        onChange={(e) => {
+                          setAwayFormationId(e.target.value);
+                          applyReset(homeFormationId, e.target.value);
+                        }}
+                      >
+                        {availableFormations.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            藍 {f.name.split('（')[0]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="btn pure-icon-btn"
+                      onClick={() => {
+                        setManualOrientation(true);
+                        setOrientation((prev) => (prev === 'vertical' ? 'horizontal' : 'vertical'));
+                      }}
+                      title="切換直向／橫向球場"
+                      aria-label="切換直向／橫向球場"
+                    >
+                      <IconRotate width={15} height={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn pure-icon-btn"
+                      onClick={() => applyReset()}
+                      title="重置球員與足球位置"
+                      aria-label="重置位置"
+                    >
+                      <IconReset width={15} height={15} />
+                    </button>
+
+                    {installPrompt && (
+                      <button
+                        type="button"
+                        className="btn pure-icon-btn"
+                        onClick={handleInstallApp}
+                        title="安裝至手機主畫面"
+                        aria-label="安裝 App"
+                      >
+                        <IconInstall width={15} height={15} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <label className="team-select is-home pure-select">
-                <select
-                  aria-label="紅隊陣型"
-                  value={homeFormationId}
-                  onChange={(e) => {
-                    setHomeFormationId(e.target.value);
-                    applyReset(e.target.value, awayFormationId);
-                  }}
-                >
-                  {availableFormations.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      紅 {f.name.split('（')[0]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="team-select is-away pure-select">
-                <select
-                  aria-label="藍隊陣型"
-                  value={awayFormationId}
-                  onChange={(e) => {
-                    setAwayFormationId(e.target.value);
-                    applyReset(homeFormationId, e.target.value);
-                  }}
-                >
-                  {availableFormations.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      藍 {f.name.split('（')[0]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <button
-                type="button"
-                className="btn pure-icon-btn"
-                onClick={() => {
-                  setManualOrientation(true);
-                  setOrientation((prev) => (prev === 'vertical' ? 'horizontal' : 'vertical'));
-                }}
-                title="切換直向／橫向球場"
-                aria-label="切換直向／橫向球場"
+              <div
+                className="board-hud"
+                role="toolbar"
+                aria-label="戰術板播放與全螢幕控制"
+                onPointerDown={(e) => e.stopPropagation()}
               >
-                <IconRotate width={15} height={15} />
-              </button>
-
-              <button
-                type="button"
-                className="btn pure-icon-btn"
-                onClick={() => applyReset()}
-                title="重置球員與足球位置"
-                aria-label="重置位置"
-              >
-                <IconReset width={15} height={15} />
-              </button>
-
-              {installPrompt && (
                 <button
                   type="button"
-                  className="btn pure-icon-btn"
-                  onClick={handleInstallApp}
-                  title="安裝至手機主畫面"
-                  aria-label="安裝 App"
+                  className="btn btn-primary board-hud-btn"
+                  onClick={handleBoardPlayToggle}
+                  aria-label={isPlaying ? '暫停戰術推演' : '播放戰術推演'}
+                  title={isPlaying ? '暫停戰術推演' : '播放戰術推演'}
                 >
-                  <IconInstall width={15} height={15} />
+                  {isPlaying ? <IconPause width={14} height={14} /> : <IconPlay width={14} height={14} />}
+                  {isPlaying ? '暫停' : '播放'}
                 </button>
-              )}
 
-              {!isPureEdition && (
                 <button
                   type="button"
-                  className="btn pure-exit-btn"
-                  onClick={exitPureMode}
-                  title="返回 AI 推演版"
+                  className="btn board-hud-btn board-hud-surface"
+                  onClick={handleBoardFullscreenToggle}
+                  aria-label={fullscreenLabel}
+                  title={fullscreenLabel}
                 >
-                  <IconCollapse width={14} height={14} />
-                  返回
+                  {showExitFullscreenIcon ? (
+                    <IconCollapse width={15} height={15} />
+                  ) : (
+                    <IconExpand width={15} height={15} />
+                  )}
+                  {fullscreenLabel}
                 </button>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            </>
+          }
+        />
       </div>
     );
   }
@@ -598,7 +696,7 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
             </button>
           </div>
 
-          <label className="team-select is-home">
+          <label className="team-select">
             <select
               aria-label="紅隊陣型"
               value={homeFormationId}
@@ -615,7 +713,7 @@ export function App({ forcePureEdition = false }: AppProps = {}) {
             </select>
           </label>
 
-          <label className="team-select is-away">
+          <label className="team-select">
             <select
               aria-label="藍隊陣型"
               value={awayFormationId}

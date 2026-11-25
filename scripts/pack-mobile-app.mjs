@@ -154,7 +154,6 @@ if (mode === 'bundle' || mode === 'all') {
   const distDir = path.join(rootDir, 'dist');
   const assetsDir = path.join(distDir, 'assets');
   if (fs.existsSync(assetsDir)) {
-    // Generate dist/pure.html for Full-Screen Pure Tactical Board PWA
     const distIndexHtml = fs.readFileSync(path.join(distDir, 'index.html'), 'utf8');
     const pureDistHtml = distIndexHtml
       .replace('./manifest.webmanifest', './manifest-pure.webmanifest')
@@ -233,8 +232,8 @@ if (mode === 'bundle' || mode === 'all') {
 
       const docsDlDir = path.join(docsDir, 'downloads');
       fs.mkdirSync(docsDlDir, { recursive: true });
-      fs.copyFileSync(pureOutPath, path.join(docsDlDir, 'Football-Tactical-Board-Pure-v1.2.0.html'));
-      fs.copyFileSync(aiOutPath, path.join(docsDlDir, 'AI-Football-Tactical-Board-Standalone-v1.2.0.html'));
+      fs.copyFileSync(pureOutPath, path.join(docsDlDir, 'Football-Tactical-Board-Pure-v1.2.1.html'));
+      fs.copyFileSync(aiOutPath, path.join(docsDlDir, 'AI-Football-Tactical-Board-Standalone-v1.2.1.html'));
 
       console.log('Bundled AI & Pure mobile apps and synced docs/:', pureOutPath);
     }

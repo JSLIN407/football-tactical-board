@@ -19,10 +19,13 @@ describe('AI Spatial Tactical Board Mobile & Desktop UI', () => {
     expect(html).not.toContain('聆聽');
   });
 
-  it('renders pure full-screen mobile edition with only pitch, tokens, and zero AI toolbars/heatmaps', () => {
+  it('renders pure full-screen mobile edition with Play & Fullscreen buttons directly on the tactical board', () => {
     const pureHtml = renderToStaticMarkup(<App forcePureEdition />);
     expect(pureHtml).toContain('pure-shell');
     expect(pureHtml).toContain('is-fullscreen');
+    expect(pureHtml).toContain('board-hud');
+    expect(pureHtml).toContain('播放');
+    expect(pureHtml).toContain('全螢幕');
     expect(pureHtml).toContain('展開戰術板快速設定');
     expect(pureHtml).not.toContain('AI 足球空間戰術推演板');
     expect(pureHtml).not.toContain('依目前球位 AI 推演');

@@ -80,11 +80,9 @@ select:focus-visible {
 }
 
 .pure-corner {
-  position: fixed;
+  position: absolute;
   top: 8px;
   right: 8px;
-  margin-top: env(safe-area-inset-top, 0px);
-  margin-right: env(safe-area-inset-right, 0px);
   z-index: 20;
   max-width: calc(100% - 16px);
 }
@@ -96,7 +94,7 @@ select:focus-visible {
   border: 1px solid var(--color-border-strong);
   background-color: var(--color-surface);
   color: var(--color-ink);
-  opacity: 0.72;
+  opacity: 0.78;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -134,8 +132,30 @@ select:focus-visible {
   padding: 0;
 }
 
-.pure-exit-btn {
-  padding: 0 8px;
+.board-hud {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-hud-btn {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+}
+
+.board-hud-surface {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.board-hud-surface:hover,
+.board-hud-surface:active {
+  background-color: var(--color-surface-hover);
 }
 
 .top-bar {
@@ -309,6 +329,7 @@ select:focus-visible {
 }
 
 .pitch-frame {
+  position: relative;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -497,6 +518,18 @@ select:focus-visible {
     width: 100%;
     height: 100%;
     max-height: 100%;
+  }
+
+  .board-hud {
+    bottom: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .board-hud-btn {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
   }
 
   .command-dock {

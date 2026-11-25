@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { PITCH_SPECS, clamp } from '../data/pitchSpecs';
 import { computeSpatialGrid } from '../engine/spatialModel';
 import type { HeatmapLayer } from '../engine/spatialModel';
@@ -23,6 +23,7 @@ interface PitchCanvasProps {
   onMovePlayer: (id: string, x: number, y: number) => void;
   onMoveBall: (x: number, y: number, holderId: string | null) => void;
   onCanvasInteract?: () => void;
+  boardOverlay?: ReactNode;
 }
 
 const SCALE = 10;
@@ -61,6 +62,7 @@ export function PitchCanvas({
   onMovePlayer,
   onMoveBall,
   onCanvasInteract,
+  boardOverlay,
 }: PitchCanvasProps) {
   const spec = PITCH_SPECS[format];
   const isVertical = orientation === 'vertical';
@@ -660,6 +662,7 @@ export function PitchCanvas({
           />
         </g>
       </svg>
+      {boardOverlay}
     </div>
   );
 }
